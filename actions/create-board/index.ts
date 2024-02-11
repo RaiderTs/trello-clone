@@ -1,49 +1,38 @@
 'use server';
 
-import { z } from 'zod';
-
-import { db } from '@/lib/db';
+import { auth } from '@clerk/nextjs';
 import { revalidatePath } from 'next/cache';
-import { redirect } from 'next/navigation';
 
-export type State = {
-  errors?: {
-    title?: string[];
-  };
-  message?: string | null;
-};
+import { InputType, ReturnType } from './types';
+import { db } from '@/lib/db';
+import { createSafeAction } from '@/lib/create-safe-action';
+import { CreateBoard } from '@/actions/create-board/schema';
 
-const CreateBoard = z.object({
-  title: z.string().min(3, {
-    message: 'Minimum length of 3 letters is required',
-  }),
-});
+const handler = async (data: InputType): Promise<ReturnType> => {
+  const { userId } = auth();
 
-export async function create(prevState: State, formData: FormData) {
-  const validatedFields = CreateBoard.safeParse({
-    title: formData.get('title'),
-  });
-
-  if (!validatedFields.success) {
-    return {
-      errors: validatedFields.error.flatten().fieldErrors,
-      message: 'Missing fields',
-    };
+  if (!userId) {
+    return { error: 'Unauthorized' };
   }
 
-  const { title } = validatedFields.data;
+  const { title } = data;
+
+  let board;
 
   try {
-    await db.board.create({
+    board = await db.board.create({
       data: {
         title,
       },
     });
   } catch (error) {
     return {
-      message: 'Database Error',
+      error: 'Failed to create',
     };
   }
 
-  revalidatePath('organization/org_2c5NN1eo1to14Wjgp9wQsWuKDHN');
-}
+  revalidatePath(`/board/${board.id}`);
+  return { data: board };
+};
+
+export const createBoard = createSafeAction(CreateBoard, handler);
