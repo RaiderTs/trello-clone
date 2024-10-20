@@ -12,6 +12,7 @@ import {
   PopoverClose,
 } from '@/components/ui/popover';
 import { useAction } from '@/hooks/use-action';
+import { copyList } from '@/actions/copy-list';
 import { deleteList } from '@/actions/delete-list';
 import { Button } from '@/components/ui/button';
 import { FormSubmit } from '@/components/form/form-submit';
@@ -23,12 +24,21 @@ interface ListOptionsProps {
 }
 
 export const ListOptions = ({ data, onAddCard }: ListOptionsProps) => {
-
-  const closeRef = useRef<ElementRef<'button'>>(null); 
+  const closeRef = useRef<ElementRef<'button'>>(null);
 
   const { execute: executeDelete } = useAction(deleteList, {
     onSuccess: (data) => {
       toast.success(`List ${data.title} deleted`);
+      closeRef.current?.click();
+    },
+    onError: (error) => {
+      toast.error(error);
+    },
+  });
+
+  const { execute: executeCopy } = useAction(copyList, {
+    onSuccess: (data) => {
+      toast.success(`List ${data.title} copied`);
       closeRef.current?.click();
     },
     onError: (error) => {
@@ -43,9 +53,12 @@ export const ListOptions = ({ data, onAddCard }: ListOptionsProps) => {
     executeDelete({ id, boardId });
   };
 
-  if (!data) {
-    return null;
-  }
+  const onCopy = (formData: FormData) => {
+    const id = formData.get('id') as string;
+    const boardId = formData.get('boardId') as string;
+
+    executeCopy({ id, boardId });
+  };
 
   return (
     <Popover>
@@ -73,7 +86,7 @@ export const ListOptions = ({ data, onAddCard }: ListOptionsProps) => {
         >
           Add card...
         </Button>
-        <form>
+        <form action={onCopy}>
           <input hidden name='id' id='id' value={data?.id} />
           <input hidden name='boardId' id='boardId' value={data?.boardId} />
           <FormSubmit
