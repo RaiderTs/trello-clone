@@ -15,5 +15,3 @@ export const CardItem = ({ index, data }: CardItemProps) => {
   );
 };
 
-
-// 8:31
