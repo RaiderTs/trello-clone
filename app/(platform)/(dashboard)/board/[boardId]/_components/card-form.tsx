@@ -1,8 +1,13 @@
 "use client";
 
-import { forwardRef } from "react";
 import { Plus, X } from "lucide-react";
+import { useRef, ElementRef, KeyboardEventHandler, forwardRef } from "react";
+import { useParams } from "next/navigation";
+import { useOnClickOutside, useEventListener } from "usehooks-ts";
+import { toast } from "sonner";
 
+import { useAction } from "@/hooks/use-action";
+import { createCard } from "@/actions/create-card";
 import { Button } from "@/components/ui/button";
 import { FormTextarea } from "@/components/form/form-textarea";
 import { FormSubmit } from "@/components/form/form-submit";
@@ -16,14 +21,60 @@ interface CardFormProps {
 
 export const CardForm = forwardRef<HTMLTextAreaElement, CardFormProps>(
   ({ listId, enableEditing, disabledEditing, isEditing }, ref) => {
+    const params = useParams();
+    const formRef = useRef<ElementRef<"form">>(null);
+
+    const { execute, fieldErrors } = useAction(createCard, {
+      onSuccess: (data) => {
+        toast.success(`Card "${data?.title}" created successfully`);
+        formRef.current?.reset();
+      },
+      onError: (error) => {
+        toast.error(error);
+      },
+    });
+
+    const onKeyDown = (event: KeyboardEvent) => {
+      if (event.key === "Escape") {
+        disabledEditing();
+        formRef.current?.reset();
+        event.preventDefault();
+      }
+    };
+
+    useOnClickOutside(formRef, disabledEditing);
+    useEventListener("keydown", onKeyDown);
+
+    const onTextareaKeyDown: KeyboardEventHandler<HTMLTextAreaElement> = (
+      e
+    ) => {
+      if (e.key === "Enter" && !e.shiftKey) {
+        e.preventDefault();
+        formRef?.current?.requestSubmit();
+      }
+    };
+
+    const onSubmit = (formData: FormData) => {
+      const title = formData.get("title") as string;
+      const listId = formData.get("listId") as string;
+      const boardId = params.boardId as string;
+
+      execute({ title, listId, boardId });
+    };
+
     if (isEditing) {
       return (
-        <form className="m-1 py-0.5 px-1 space-y-4">
+        <form
+          ref={formRef}
+          action={onSubmit}
+          className="m-1 py-0.5 px-1 space-y-4"
+        >
           <FormTextarea
             id={"title"}
-            onKeyDown={() => {}}
+            onKeyDown={onTextareaKeyDown}
             ref={ref}
             placeholder="Enter the title of this card..."
+            errors={fieldErrors}
           />
           <input hidden id="listId" name="listId" value={listId} />
           <div className="flex items-center gap-x-1">
@@ -52,6 +103,3 @@ export const CardForm = forwardRef<HTMLTextAreaElement, CardFormProps>(
   }
 );
 CardForm.displayName = "CardForm";
-
-
-// 8:15
