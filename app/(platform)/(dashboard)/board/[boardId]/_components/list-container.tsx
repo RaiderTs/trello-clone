@@ -1,9 +1,12 @@
 "use client";
 
+import { toast } from "sonner";
 import { useEffect, useState } from "react";
 import { DragDropContext, Droppable } from "@hello-pangea/dnd";
 
 import { ListWithCards } from "@/types";
+import { useAction } from "@/hooks/use-action";
+import { updateListOrder } from "@/actions/update-list-order";
 
 import { ListForm } from "./list-form";
 import { ListItem } from "./list-item";
@@ -23,6 +26,15 @@ function reorder<T>(list: T[], startIndex: number, endIndex: number) {
 
 export const ListContainer = ({ data, boardId }: ListContainerProps) => {
   const [orderedData, setOrderedData] = useState(data);
+
+  const { execute: executeUpdateListOrder } = useAction(updateListOrder, {
+    onSuccess: (data) => {
+      toast.success("List order updated!");
+    },
+    onError: (error) => {
+      toast.error(error);
+    },
+  });
 
   useEffect(() => {
     setOrderedData(data);
@@ -54,7 +66,7 @@ export const ListContainer = ({ data, boardId }: ListContainerProps) => {
         }
       );
       setOrderedData(items);
-      // TODO: Trigger server action
+      executeUpdateListOrder({ items, boardId });
     }
 
     // user moves the card
@@ -92,9 +104,9 @@ export const ListContainer = ({ data, boardId }: ListContainerProps) => {
           destination.index
         );
 
-        reorderedCards.forEach((card,idx) => {
+        reorderedCards.forEach((card, idx) => {
           card.order = idx;
-        })
+        });
 
         sourceList.cards = reorderedCards;
         setOrderedData(newOrderData);
@@ -109,14 +121,14 @@ export const ListContainer = ({ data, boardId }: ListContainerProps) => {
         // add the card to the destination list
         destList.cards.splice(destination.index, 0, movedCard);
         // update the order for each card in the source list
-        sourceList.cards.forEach((card,idx) => {
+        sourceList.cards.forEach((card, idx) => {
           card.order = idx;
-        })
+        });
 
         // update the order for each card in the destination list
-        destList.cards.forEach((card,idx) => {
+        destList.cards.forEach((card, idx) => {
           card.order = idx;
-        })
+        });
 
         setOrderedData(newOrderData);
         // TODO: Trigger server action
@@ -145,4 +157,3 @@ export const ListContainer = ({ data, boardId }: ListContainerProps) => {
     </DragDropContext>
   );
 };
-
