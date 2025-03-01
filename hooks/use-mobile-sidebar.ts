@@ -1,4 +1,6 @@
-import { create } from 'zustand';
+
+import { create, StateCreator } from 'zustand';
+import { devtools } from 'zustand/middleware';
 
 type MobileSidebarStore = {
   isOpen: boolean;
@@ -7,8 +9,12 @@ type MobileSidebarStore = {
 };
 
 
-export  const useMobileSidebar = create<MobileSidebarStore>((set) => ({
-    isOpen: false,
-    onOpen: () => set({ isOpen: true }),
-    onClose: () => set({ isOpen: false }),
-  }));
+const mobileSidebarStore: StateCreator<MobileSidebarStore> = (set) => ({
+  isOpen: false,
+  onOpen: () => set({ isOpen: true }),
+  onClose: () => set({ isOpen: false }),
+});
+
+export const useMobileSidebar = create<MobileSidebarStore>()(
+  devtools(mobileSidebarStore)
+);
